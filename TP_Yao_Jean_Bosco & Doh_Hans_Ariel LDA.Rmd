@@ -1,0 +1,557 @@
+---
+title: "Projet_LDA_ADG"
+author: "Yao_Nguessan_Jean_Bosco/Doh_Hans'Ariel"
+date: "2024-06-07"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+Analyse Factorielle Discriminante
+
+1. Combien d’axes discriminants peut-on construire avec les données dont on dispose?
+
+Pour déterminer le nombre d'axes discriminants que l'on peut construire
+avec les données dont on dispose pour une analyse factorielle
+discriminante (AFD), il faut se baser sur le nombre de groupes et le
+nombre de variables quantitatives disponibles.
+
+Soit donc g le nombre de groupe et k = 6 le nombre de variable. le
+nombre d'axe discriminant est donné par la relation: AxesDiscriminant =
+min(g-1,k)= min(3-1,6)= 2
+
+2.  Préciser le nombre total d’insectes pris en compte dans l’étude,
+    ainsi que le nombre d’insectes dans chaque groupe
+
+Pour cette question nous allons au prealable charger le jeu de données
+dans notre espace de travail puis ressortir le nombre d'insecte via des
+commandes R
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+fichier = "D:/Data Science/semestre8/Regresion Logistique/Prof/TP_reg_logistique/TP_Projet_2024/insectes.rda"
+load(fichier)
+```
+
+```{r insectes, echo=TRUE}
+nrow(insectes)
+```
+
+Après verification il ressort que nous travaillons sur un jeu de données
+de 74 insectes
+
+3.  Quel est le centre de gravité g de l’ensemble des données? Donner
+    les centres de gravité gA, gB et gC de chacun des 3 groupes.
+
+Pour repondre à cette question nous allons d'abord charger les
+librairies que nous estimons indispensable pour la poursuite du travail
+
+```{r, echo=TRUE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+
+```
+
+Après chargement des packages nous cherchons à present les centre de
+gravité global
+
+```{r, echo=TRUE}
+centre_global <- insectes %>%
+  select(-type) %>%
+  summarise(centre_gravite = mean(rowMeans(across(everything()))))
+
+cat("Centre de gravité global:\n")
+print(centre_global)
+
+```
+
+centre de gravité par groupe
+
+```{r,echo=TRUE}
+# Calculer les centres de gravité pour chaque groupe
+centre_groupe_A <- insectes %>%
+  filter(type == "A") %>%
+  select(-type) %>%
+  summarise(centre_gravite = mean(rowMeans(across(everything()))))
+
+centre_groupe_B <- insectes %>%
+  filter(type == "B") %>%
+  select(-type) %>%
+  summarise(centre_gravite = mean(rowMeans(across(everything()))))
+
+centre_groupe_C <- insectes %>%
+  filter(type == "C") %>%
+  select(-type) %>%
+  summarise(centre_gravite = mean(rowMeans(across(everything()))))
+
+# Afficher les centres de gravité pour chaque groupe
+cat("A: gA =", centre_groupe_A$centre_gravite, "\n")
+cat("B: gB =", centre_groupe_B$centre_gravite, "\n")
+cat("C: gC =", centre_groupe_C$centre_gravite, "\n")
+```
+
+4.  En considérant l’ensemble des données, quelle est la variable la
+    plus dispersée? la moins dispersée?
+
+pour avoir une idée de la variable la plus dispersé, nous calculer la
+variance de chaque variable puis les comparer entre elles
+
+```{r,echo=TRUE}
+# Calculer la variance pour chaque variable
+variances <- insectes %>%
+  select(-type) %>%
+  summarise(across(everything(), var, na.rm = TRUE))
+
+# Afficher les variances
+print(variances)
+
+# Trouver la variable la plus dispersée (variance maximum)
+variable_plus_dispersée <- names(variances)[which.max(variances)]
+
+# Trouver la variable la moins dispersée (variance minimum)
+variable_moins_dispersée <- names(variances)[which.min(variances)]
+
+
+```
+
+```{r, echo = TRUE}
+cat("Variable la plus dispersée:", variable_plus_dispersée, "\n")
+cat("Variable la moins dispersée:", variable_moins_dispersée, "\n")
+
+```
+
+5.  Faire une ACP des données et visualiser les insectes et les
+    variables sur le premier plan factoriel. Commentez. L’ACP vous
+    semble-t-elle une bonne méthode pour discriminer les trois groupes
+    d’insectes? Pour mener à bien notre ACP nous allons chargerons les
+    packages necessaires
+
+```{r,echo=TRUE}
+library(FactoMineR)
+library(factoextra)
+```
+
+Après chargement des packages nous passons à l'ACP
+
+```{r,echo=TRUE}
+# Effectuer l'ACP
+acp_result <- PCA(insectes %>% select(-type), graph = FALSE)
+
+# Afficher les résultats de l'ACP
+print(acp_result)
+
+
+```
+
+Après sortie des resultats de l'ACP nous allons les visualiser pour
+d'eventuelles interpretations
+
+a- visualisation des individus (insectes) sur le premier plan factoriel
+
+```{r,echo=TRUE}
+fviz_pca_ind(acp_result, 
+             geom.ind = "point", 
+             col.ind = insectes$type, 
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, 
+             legend.title = "Groupes")
+
+```
+
+On voit bien que les individus sont bien representés sur les deux
+principaux plan factoriel,cependant cette visualisation ne nous permet
+pas en realité de mieux classifier les indivus. En effet si nous
+projettons les individus en couleur vert et les individu en couleur
+rouge sur le premier plan factoriel, on voit qu'il y' a chevauchement,
+on aurait dans ce cas de figure tendance à dire que les individu sont
+dans le même groupe et donc que l'ensemble des individu formerait que
+deux groupe en y ajoutant les individu marqué ici en jaune. Cette
+remarque reste la même quand nous projettons l'ensemble des individu sur
+le 2e plan factoriel,cependant cette fois ci on aurait tendance à
+classifier les individus jaune et vert dans le même groupe
+
+```{r,echo=TRUE}
+fviz_pca_var(acp_result,
+             col.var = "contrib", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             legend.title = "Contribution")
+
+```
+
+Le cercle de correlation entre les variables vient corroboré les
+remarques que nous avons fait plus haut. En effet on ici que les
+variable X3,X4 et fortement corrélé et s'opposent aux variables X1 et
+X2. on aura tendance donc négligé certaines caractéristique
+enssentielles (par elimination de variable) à notre classification
+
+6.  Faire maintenant un AFD
+
+```{r,echo=TRUE}
+source("AFD_procedures.R")
+install.packages("ade4")
+install.packages("MASS")
+library(ade4)
+library(MASS)
+
+res <- AFD(X,y)
+
+```
+
+```{r,echo=TRUE}
+res$eig
+```
+
+Au vu des pourvoirs discriminants deux axes semblent nécessaires pour
+avoir une bonne discrimination des groupes
+
+7.  Visualisez les insectes sur le premier plan de l’AFD et les
+    variables sur le cercle des corrélations correspondant. Commentez.
+
+```{r,echo=TRUE}
+plotAFD(res)
+```
+
+D'après le cercle de correlation les variables X6,X4,X3,et X4 se
+trouvent dans le même quadrant elles auront donc tendance à être
+corrélées de manière similaire par rapport aux axes discriminants on
+voit aussi que les varibles X3 est proche de X6 et X2 est proche de X4
+ainsi X3 et X6 ont une contribution presque similaire à l'axe
+discriminant, de même X2 et X4 ont contribution presque similaire à
+l'axe discriminant. les variables X6,X3,X4,X2 sont situé dans un cadrant
+opposé aux variables X1 et X2 ainsi ont peut dire quelles contribue de
+manière opposé à la discrimination. les variables X6,X4,X1,X5 sont plus
+proche des bords du cercle elles ont donc une contributions plus
+importante aux discriminant par rapport aux variable X3 et X2. Au niveau
+du nuage des individus, La présence de trois groupes distincts montre
+que les variables explicatives utilisées dans l'AFD sont efficaces pour
+discriminer entre les différents groupes d'insectes. La séparation
+claire sur le premier plan indique que ces axes contiennent la majorité
+de l'information discriminante.
+
+8.  A votre avis, les données ont-elles été centrées avant de faire
+    l’AFD ?
+
+A la question de savoir si les données ont été centrées avant de faire
+l'AFD nous pouvons pas donner de reponse exacte car le centrage des
+données le modifie pas le nuage des individus lors d'une AFD
+
+9.  Calculer les coordonnées de la projection des centres de gravité gA,
+    gB et gC (des données centrées) sur le premier axe discriminant.
+    Vérifiez qu’il s’agit des moyennes de la première variable
+    discriminante dans chaque groupe
+
+Centre de gravité des données centrées
+
+```{r,echo=TRUE}
+gA <- res$gk[[1]]-res$g
+gB <- res$gk[[2]]-res$g
+gC <- res$gk[[3]]-res$g
+
+u1<-res$U[,1] #1er facteurs discriminants
+t(gA)%*%u1
+t(gB)%*%u1
+t(gC)%*%u1
+
+
+
+
+```
+
+Vérifiions qu’il s’agit des moyennes de la première variable
+discriminante dans chaque groupe.
+
+```{r,echo=TRUE}
+S1 <- res$S[,1] #1ere variable discriminante
+Sk <- split(S1,y)
+lapply(Sk,mean)
+
+plotAFD(res,dim=1)
+
+```
+
+D'après le deuxième tableau on voit bien qu'il s'agit bien des moyennes
+de la première variable discriminante.
+
+10. On considère que la première variable disciminante est un bon score.
+    Calculez le score d’un nouvel insecte pour lesquel X = (193, 131,
+    55, 160, 16, 102) sur cette première variable discriminante. Nous
+    centrer les vdonnées du nouvelle individu
+
+```{r,echo=TRUE}
+obs <- c(193,131,55,160,16,102)
+g <- res$g
+g <- res$g[,,drop=TRUE] 
+obs2 <- obs-g
+obs2%*%u1
+
+```
+
+11. Proposez des seuils pour construire une régle de décision. A votre
+    avis, quel sera le taux d’erreur avec cette règle de décision sur
+    les données ? A quelle classe appartient le nouvel insecte de la
+    question précédente avec cette règle de décision ?
+
+nous calculons le seuil de classification entre C et A puis le seuil de
+classification entre A et B
+
+```{r,echo=TRUE}
+smoy <- lapply(Sk,mean)
+seuil1 <- (smoy$C+smoy$A)/2 #seuil entre C et A
+seuil2 <- (smoy$A+smoy$B)/2 #seuil entre A et B
+
+```
+
+Nous definissons S1 : Un vecteur de scores ou de valeurs que nous
+souhaitons classifier. cut : Fonction qui découpe S1 en intervalles
+définis par breaks. breaks = c(-2, seuil2, seuil1, 2) : Définit les
+limites des intervalles de classification. Les valeurs de S1 inférieures
+à seuil2 seront classées comme "B", entre seuil2 et seuil1 comme "A", et
+supérieures à seuil1 comme "C". labels = c("B", "A", "C") : Assigne les
+étiquettes "B", "A", et "C" aux intervalles correspondants.
+
+```{r,echo=TRUE}
+predict <- cut(S1,breaks=c(-2,seuil2,seuil1,2),labels=c("B","A","C"))
+table(y,predict)
+sum(y!=predict)/74
+
+```
+
+D'après la matrice obtenu après prediction on a les resultats suivants:
+Ligne A, Colonne B (0) : Nombre d'observations du groupe réel A prédites
+comme B Ligne A, Colonne A (21) : Nombre d'observations du groupe réel A
+prédites correctement comme A. Ligne A, Colonne C (0) : Nombre
+d'observations du groupe réel A prédites comme C.
+
+Ligne B, Colonne B (22) : Nombre d'observations du groupe réel B
+prédites correctement comme B.
+
+Ligne B, Colonne A (0) : Nombre d'observations du groupe réel B prédites
+comme A.
+
+Ligne B, Colonne C (0) : Nombre d'observations du groupe réel B prédites
+comme C.
+
+Ligne C, Colonne B (0) : Nombre d'observations du groupe réel C prédites
+comme B.
+
+Ligne C, Colonne A (0) : Nombre d'observations du groupe réel C prédites
+comme A.
+
+Ligne C, Colonne C (31) : Nombre d'observations du groupe réel C
+prédites correctement comme C.
+
+On voit donc que dans le Groupe A 21 observations du groupe A ont été
+correctement classées, dans Groupe B, 22 observations du groupe B ont
+été correctement classées et dans le groupe Groupe C 31 observations du
+groupe C ont été correctement classées. On voit aussi qu' Aucune
+observation du groupe A n'a été incorrectement classée comme B ou C.
+Aucune observation du groupe B n'a été incorrectement classée comme A ou
+C. Aucune observation du groupe C n'a été incorrectement classée comme A
+ou B. Le taux d'erreur est calculé par sum(y!=predict)/74 et le resultat
+donne [1] 0 ce qui indique qu'il n'y a eu aucune erreur de
+classification.
+
+Pour savoir à quelle classe appartient le nouvel insecte de la question
+précédente avec cette règle de décision ? nous allons afficher les
+seuils puis decider à partir de la remarque précédente.
+
+```{r,echo=TRUE}
+print(seuil1)
+print(seuil2)
+```
+
+le score du nouvel individu est entre le seuil2 et le seul1 donc nous
+affectons le nouvel individu au groupe A
+
+12. Construire le score et la règle de décision de l’AFD sur un
+    échantillon aléatoire de 50 insectes (formant un échantillon
+    d’apprentissage). Calculer les scores des 24 autres insectes
+    (l’échantillon test) et classer ces 24 insectes avec la régle de
+    décision construite sur l’ensemble d’apprentissage. Quel est le taux
+    d’erreur ?
+
+Construction du score
+
+```{r,echo=TRUE}
+n<-nrow(X)
+index <- sample.int(n,50)
+Xapp <- X[index,]
+yapp <- y[index]
+Xtest <- X[-index,]
+ytest <- y[-index]
+
+
+```
+
+Construction de la règle sur l'ensemble d'apprentissage
+
+```{r, echo=TRUE}
+res <- AFD(Xapp,yapp)
+S <- res$S
+Sk <- split(S,yapp)
+smoy <- lapply(Sk,mean)
+seuil1 <- (smoy$C+smoy$A)/2 #seuil entre C et A
+seuil2 <- (smoy$A+smoy$B)/2 #seuil entre A et B
+
+
+```
+
+Application de la règle sur l'ensemble de test
+
+```{r,echo=TRUE}
+g <- res$g[,,drop=TRUE] #centre de gravitÃ© calculÃ© sur Xapp
+Xtest_centre <- sweep(Xtest,2,STATS=g,FUN="-") #centrage des donnÃ©es
+
+Stest <- as.matrix(Xtest_centre)%*%u1 
+
+predict <- cut(Stest,breaks=c(-2,seuil1,seuil2,2),labels=c("C","A","B"))
+table(ytest,predict)
+sum(ytest!=predict)/n
+
+
+```
+
+D'après la matrice obtenu après prediction on a les resultats suivants:
+Ligne A, Colonne B (0) : Nombre d'observations du groupe réel A prédites
+comme B Ligne A, Colonne A (4) : Nombre d'observations du groupe réel A
+prédites correctement comme A. Ligne A, Colonne C (1) : Nombre
+d'observations du groupe réel A prédites comme C.
+
+Ligne B, Colonne B (0) : Nombre d'observations du groupe réel B prédites
+correctement comme B.
+
+Ligne B, Colonne A (0) : Nombre d'observations du groupe réel B prédites
+comme A.
+
+Ligne B, Colonne C (5) : Nombre d'observations du groupe réel B prédites
+comme C.
+
+Ligne C, Colonne B (14) : Nombre d'observations du groupe réel C
+prédites comme B.
+
+Ligne C, Colonne A (0) : Nombre d'observations du groupe réel C prédites
+comme A.
+
+Ligne C, Colonne C (0) : Nombre d'observations du groupe réel C prédites
+correctement comme C.
+
+On voit donc que dans le Groupe A 4 observations ont été correctement
+classées, dans le Groupe B, toutes lees observations ont été
+incorrectement classées et de même pour le groupe Groupe C. On voit
+aussi que 1 observation du groupe A a été incorrectement classées comme
+C Dans le groupe B 5 observation ont été incorrectement classées comme C
+Dans le groupe C 14 observation ont été incorrectement classées comme B
+
+Le taux d'erreur predit est calculé par sum(y!=predict)/n et le resultat
+donne 0.2702703 ce qui indique qu'il n'y a des erreurs dans la
+classification.
+
+13. On veut maintenant comparer l’approche “anglo-saxonne” et l’approche
+    “francophone” de l’AFD. Pour cela, utilisez l’argument type=“FR” et
+    type=“GB” dans la fonction AFD du code R. Comparez numériquement les
+    valeurs propres des deux approches. Comparez numériquement puis
+    visuellement les variables discriminantes.
+
+```{r,echo=TRUE}
+res1 <- AFD(X,y, type="FR")
+res2 <- AFD(X,y, type="GB")
+lambda <- res1$eig
+mu <- res2$eig
+
+lambda/(1-lambda)
+mu
+
+head(res1$U) 
+head(res2$U) 
+
+
+```
+
+On constate qu'on a les même valeur propre pour les deux approches,
+cependant la norme est donné par u'Vu = 1 pour l'approche francophone et
+u'Wu = 1 pour l'approche anglo-saxone
+
+```{r,echo=TRUE}
+head(res1$S) #donc mÃªme variable discriminante mais normÃ© tq var(s)=1
+head(res2$S) #donc mÃªme variable discriminante mais normÃ© tq intra(s)=1
+
+
+```
+
+On a les même variables discriminantes mais la norme est t-elle que
+var(s)=1 pour l'approche francophone intra(s)=1 pour l'approche
+anglo-saxone
+
+```{r,echo=TRUE}
+plotAFD(res1)
+plotAFD(res2)
+
+```
+
+La comparaison visuelle vient corroboré nos les interpretations faites
+précédement
+
+14. On peut utiliser les fonctions lda et predict. lda du package MASS
+    pour effectuer une analyse canonique discriminante (terminologie
+    anglo-saxonne pour une AFD). Déterminer les facteurs et les
+    variables discriminantes et Vérifier dans R que l’on retrouve bien
+    les mêmes
+
+chargement du package MASS
+
+```{r,echo=TRUE}
+library(MASS)
+```
+
+Utilisation du package lda pour effectuer une analyse canonique
+discriminante
+
+```{r,echo=TRUE}
+res3 <- lda(type~.,insectes)
+res3$scaling #facteur discriminant
+
+```
+
+on voit ici la sortie du facteurs discriminant selon l'approche
+anglo-saxone
+
+```{r,echo=TRUE}
+res2$U 
+
+```
+
+On voit ici la sortie du fateur discriminant selon l'approche
+francophone. Nous concluons que les deux sorties on un resultat
+identique
+
+```{r,echo=TRUE}
+pred <- predict(res3)
+
+```
+
+```{r,echo=TRUE}
+#predict.lda
+
+```
+
+La fonction predict et predict.lda jouent le rôle
+
+```{r,echo=TRUE}
+pred$x[1:5,] #variable discriminante (score de l'AFD)
+
+```
+
+on obtient la variable discrimanante (le score de l'AFD)
+
+```{r,echo=TRUE}
+res2$S[1:5,] 
+
+
+```
+
+on constate une approche identique celui des anglo-saxone

@@ -1,0 +1,75 @@
+---
+title: "Analyse_Discrinante_geometrique"
+author: "Yao_Nguessan_Jean_Bosco/Doh_Hans'Ariel"
+date: "2024-06-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# *Analyse discriminante géométrique*
+
+## Importation des différentes librairies
+
+```{r}
+source("AFD_procedures.R")
+#source("LDA_procedures.R")
+library(MASS)
+library(ggplot2)
+library(ade4)
+```
+
+## Chargement des données
+
+```{r}
+infarctus = INFARCTU
+head(infarctus)
+```
+
+1. Combien d’axes discriminants peut-on construire en effectuant une Analyse Factorielle Discriminante (AFD) sur ces données ? Comment est construit cet axe ?
+(expliquer rapidement sans formules).
+
+Pour déterminer le nombre d'axes discriminants que l'on peut construire avec les données dont on dispose pour une analyse discriminante factorielle (AFD), il faut se baser sur le nombre de groupes et le nombre de variables quantitatives disponibles.
+
+Soit donc k= 2, le nombre de groupe et p = 3 le nombre de variable. lenombre d'axe discriminant est donné par la relation: AxesDiscriminant = min(k-1,p)= min(2-1,3)= 1.
+
+Cet axe est construit en minimisant la variance intra-groupe et en maximisant la variance inter-groupe.
+
+2. Interprètation des résultats de l'AFD
+
+Ce chiffre indique la proportion de la variance totale expliquée par le premier axe discriminant. Un pouvoir discriminant de 0.5037338 signifie que cet axe capture environ 50.37% de la variance inter-groupe, ce qui montre une bonne capacité à séparer les groupes sur cet axe.
+
+FRCAR (0.3258713) : Cette variable a une corrélation positive modérée avec l'axe discriminant, contribuant à la séparation des groupes dans la direction positive de cet axe.
+
+INSYS (-0.9443729) : Cette variable a une forte corrélation négative avec l'axe discriminant, indiquant qu'elle joue un rôle majeur dans la séparation des groupes dans la direction négative de cet axe.
+
+PRDIA (0.664995) : Cette variable a une corrélation positive significative avec l'axe discriminant, contribuant fortement à la séparation des groupes dans la direction positive de cet axe.
+
+3. Représenter les victimes sur le premier axe discriminant.
+
+```{r}
+X <- infarctus[,c(4,6,7)]
+y <- infarctus[,3]
+
+head(infarctus[,c(3,4,6,7)])
+```
+
+
+
+```{r}
+resAFD <- AFD(X,y)
+```
+
+
+```{r}
+resAFD$eig
+```
+
+
+```{r}
+plotAFD(resAFD)
+```
+
+

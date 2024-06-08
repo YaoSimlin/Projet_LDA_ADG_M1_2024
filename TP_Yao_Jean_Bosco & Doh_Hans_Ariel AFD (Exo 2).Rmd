@@ -1,0 +1,325 @@
+---
+title: "Analyse_Discrinante_geometrique"
+author: "Yao_Nguessan_Jean_Bosco/Doh_Hans'Ariel"
+date: "2024-06-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# ANALYSE DISCRIMINANTE GEOMETRIQUE
+
+## Importation des différentes librairies
+
+```{r}
+source("AFD_procedures.R")
+source("LDA_procedures_chavent.R")
+library(MASS)
+library(ggplot2)
+library(ade4)
+```
+
+## Chargement des données
+
+```{r}
+infarctus = INFARCTU
+head(infarctus)
+```
+
+1. Combien d’axes discriminants peut-on construire en effectuant une Analyse Factorielle Discriminante (AFD) sur ces données ? Comment est construit cet axe ?
+(expliquer rapidement sans formules).
+
+Pour déterminer le nombre d'axes discriminants que l'on peut construire avec les données dont on dispose pour une analyse discriminante factorielle (AFD), il faut se baser sur le nombre de groupes et le nombre de variables quantitatives disponibles.
+
+Soit donc k= 2, le nombre de groupe et p = 3 le nombre de variable. lenombre d'axe discriminant est donné par la relation: AxesDiscriminant = min(k-1,p)= min(2-1,3)= 1.
+
+Cet axe est construit en minimisant la variance intra-groupe et en maximisant la variance inter-groupe.
+
+2. Interprètation des résultats de l'AFD
+
+Ce chiffre indique la proportion de la variance totale expliquée par le premier axe discriminant. Un pouvoir discriminant de 0.5037338 signifie que cet axe capture environ 50.37% de la variance inter-groupe, ce qui montre une bonne capacité à séparer les groupes sur cet axe.
+
+FRCAR (0.3258713) : Cette variable a une corrélation positive modérée avec l'axe discriminant, contribuant à la séparation des groupes dans la direction positive de cet axe.
+
+INSYS (-0.9443729) : Cette variable a une forte corrélation négative avec l'axe discriminant, indiquant qu'elle joue un rôle majeur dans la séparation des groupes dans la direction négative de cet axe.
+
+PRDIA (0.664995) : Cette variable a une corrélation positive significative avec l'axe discriminant, contribuant fortement à la séparation des groupes dans la direction positive de cet axe.
+
+3. Représenter les victimes sur le premier axe discriminant.
+
+```{r}
+X <- infarctus[,c(4,6,7)]
+y <- infarctus[,3]
+
+head(infarctus[,c(3,4,6,7)])
+```
+```{r}
+victimes2 <- infarctus[,c(3,4,6,7)]
+```
+
+
+
+```{r}
+resAFD <- AFD(X,y)
+```
+
+
+```{r}
+resAFD$eig
+```
+
+
+```{r}
+plotAFD(resAFD)
+```
+
+4. Le principe d'affectation de la règle géométrique vise à affecter un individu à la classe la plus proche en se basant sur la notion de distance par rapport aux différents centres de gravités Ga où Ga est le centre de gravité de la classe a.
+
+5.
+
+# Expressions des deux fonctions
+
+L1(x) = −39.808 + 0.516⋅FRCAR + 1.080⋅INSYS + 0.636⋅PRDIA
+
+L2(x) = −47.126 + 0.561⋅FRCAR + 1.375⋅INSYS + 0.478⋅PRDIA
+
+# Valeur pour la seconde victime
+
+## Pour la fonction discrimiante du groupe 1
+
+```{r}
+L1_2 =  -39.808 + 0.516*victimes2[2,"FRCAR"] + 1.080*victimes2[2,"INSYS"] + 0.636*victimes2[2,"PRDIA"]
+L1_2
+```
+
+## Pour la fonction discrimiante du groupe 2
+
+```{r}
+L2_2 = -47.126 + 0.561*victimes2[2,"FRCAR"] + 1.375*victimes2[2,"INSYS"] + 0.478*victimes2[2,"PRDIA"]
+L2_2
+```
+6. Quelle prédiction proposez-vous pour cette victime?
+
+On constate que L1_2 > L2_2 d'où la victime appartient au groupe 1 (DECES) 
+
+7. Dans le cas particulier de K = 2 groupes, on préfère parfois construire une seule fonction linéaire discriminante delta1/2(x) appelée fonction discriminante de Fisher. Donner l’expression cette fonction et sa valeur (son score) pour la seconde victime.
+
+```{r}
+delta = L1_2 - L2_2
+delta = 7.318 - 0.045*victimes2[2,"FRCAR"] - 0.295*victimes2[2,"INSYS"] + 0.158*victimes2[2,"PRDIA"]
+delta
+```
+On constate delta = 1.5435 > 0 donc la vicitime est classée dans le groupe 1 (DECES).
+
+8. A quel seuil faut-il comparer ce score pour prédire le groupe de cette victime?
+
+Le seuil auquel il faut comparer ce score pour prédire le groupe de cette victime est 0.
+
+Quel est le lien avec l’AFD?
+
+L'AFD utilise les données pour déterminer des fonctions discriminantes qui maximisent la séparation entre les groupes. Les scores résultant de ces fonctions permettent de classer les observations en fonction de leur proximité à chaque groupe, facilitant ainsi la prédiction de leur appartenance à l'un des groupes étudiés.
+
+9. Construction de la matrice de confusion
+
+```{r}
+res <- linear_func(X,y,type="geom")
+yhat <- apply(res$S,1,which.max)
+yhat <- as.factor(infarctus$PRONO)
+levels(yhat) <- c("DECES", "SURVIE")
+T <- table(yhat,y) #matrice de confusion
+T
+```
+
+D'après la matrice obtenu après prediction on a les resultats suivants:
+
+Ligne DECES, Colonne DECES (51) : Nombre d'observations du groupe réel DECES prédites correctement comme DECES.
+
+Ligne DECES, Colonne SURVIE (0) : Nombre d'observations du groupe réel DECES prédites comme SURVIE.
+
+Ligne SURVIE, Colonne DECES (0) : Nombre d'observations du groupe réel SURVIE prédites comme DECES.
+
+LIGNE SURVIE, Colonne SURVIE (50) : Nombre d'observations du groupe réel SURVIE prédites correctement comme SURVIE.
+
+10.
+
+# Taux de mauvais classement
+```{r}
+sum(y != yhat)/101 
+```
+# Taux de bon classement
+
+```{r}
+sum(diag(T))/length(yhat)
+```
+# Sensibilité et spécificité
+```{r}
+diag(T)/apply(T,2,sum) 
+```
+11. En tant que statisticien, que feriez-vous d’autre pour évaluer mieux cette régle de décision?
+
+Le fait que le modèle affiche un taux de mauvais classement de 0 et un taux de bon classement de 1 (ainsi que des sensibilités et spécificités de 1) peut indiquer que le modèle fonctionne parfaitement sur notre jeu de données actuel. Cependant, en tant que statisticien, il est crucial de s'assurer que ce résultat n'est pas simplement dû à un surapprentissage (overfitting) ou à des particularités spécifiques de votre jeu de données. 
+
+Il est essentiel de vérifier la robustesse et la généralisation de votre modèle en utilisant des techniques telles que la validation croisée, l'analyse des courbes ROC et AUC, l'analyse des résidus, et la validation avec un jeu de données indépendant. Ces approches nous aideront à éviter le surapprentissage et à obtenir une évaluation plus fiable de la performance de votre règle de décision.
+
+# ANALYSE DISCRIMINANTE GEOMETRIQUE (avec toutes les variables)
+
+1.
+
+# Determiner les fonctions linéaires discriminantes de la règle géométrique avec la fonction linear func 
+```{r}
+X <- infarctus[,-c(1, 2, 3)]
+y <- infarctus[,3]
+res <- linear_func(X,y,type="geom")
+Lk <- res$Lk
+Lk
+```
+
+# Fonction linéaire discriminante de Fisher.
+
+```{r}
+delta2 <- Lk[,1]-Lk[,2] 
+delta2
+```
+
+2. Score de Fisher du nouveau patient
+
+```{r}
+beta0 <- delta2[1]
+beta <- delta2[-1]
+x <- c(90, 1.71, 19, 16, 19.5, 16, 912) # nouveau patient
+score_new <- beta0 + sum(x*beta) # score de Fisher de ce patient
+score_new
+```
+3. Calculons le score de Fisher des 151 victimes du jeux de données et prédisons leur groupe d’appartenance dans un vecteur yhat.
+
+```{r}
+S <- res$S[,1]-res$S[,2] #score de Fisher des 101 patients
+head(S)
+```
+
+```{r}
+yhat <- as.factor(S < 0)
+levels(yhat) <- c("DECES","SURVIE")
+head(yhat)
+```
+4. 
+```{r}
+plot(S, rep(0, length(S)), xlab = "Axe 1", ylab = "", col = as.numeric(yhat))
+
+# Ajouter la légende
+legend("topleft", legend = levels(yhat), text.col = c(1:length(levels(yhat))), cex = 0.8)
+```
+Nous constatons qu'il n'y a pas de confusion dans la représentation de nos variables donc l'axe 1 permet de mieux discriminer les individus.
+
+```{r}
+cor(X,S) # Corrélation entre la variable à expliquer les variables explicatives
+```
+5. Determination de la matrice de confusion, le taux de mauvais classement, de bon classement, le taux de vrais positifs (la sensibilité) et le taux de vrais négatifs (la spécificité)
+
+# Matrice de confusion
+
+```{r}
+T <- table(yhat,y) #matrice de confusion
+T
+```
+# Taux de mauvais classement 
+
+```{r}
+sum(y != yhat)/101
+```
+
+# Taux de mauvais classement
+
+```{r}
+sum(diag(T))/length(yhat) 
+```
+
+# Sensibilité et spécificité
+
+```{r}
+diag(T)/apply(T,2,sum) 
+```
+
+6. Retrouvez les résultats de la question précédente en utilisant cette fois la fonction lda du package MASS. Pour retrouver la règle géométrique de classement, il faut utiliser l’argument prior=c(0.5,0.5) qui indique qu’on fait l’hypothèse d’équiprobabilité des deux groupes. Cette hypothèse vous semble-elle raisonnable sur ces données?
+
+```{r}
+library(MASS)
+lda <- lda(PRONO~.,infarctus[,-c(1,2)],prior=c(0.5,0.5))
+pred <- predict(lda) 
+yhat <- pred$class 
+table(yhat,y) #matrice de confusion
+```
+D'après la matrice obtenu après prediction on a les resultats suivants:
+Ligne DECES, Colonne DECES (46) : Nombre d'observations du groupe réel DECES prédites correctement comme DECES.
+
+Ligne DECES, Colonne SURVIE (8) : Nombre d'observations du groupe réel DECES prédites comme SURVIE.
+
+Ligne SURVIE, Colonne DECES (5) : Nombre d'observations du groupe réel SURVIE prédites comme DECES.
+
+LIGNE SURVIE, Colonne SURVIE (42) : Nombre d'observations du groupe réel SURVIE prédites correctement comme SURVIE.
+
+Oui, nous constatons que cette hypothèse est raisonnable puisque nous avons deux groupes, il est donc raisonnable de se placer sous l'hypothèse d'équiprobabilité
+
+7. Calculons le taux d’erreur de classement par la méthode de l’échantillon test (avec 70 victimes dans l’échantillon d’apprentissage).
+
+```{r}
+n <- nrow(X)
+tr <- sample(1:n,70)
+train <- X[tr,] #echantillon d'apprentissage
+test <- X[-tr,] #echantillon test
+
+m <- lda(train, y[tr],prior=c(0.5,0.5)) #regle construite sur l'echantillon d'apprentissage
+
+yhat <- predict(m, test)$class #predictions sur l'échantillon test
+
+head(yhat)
+```
+```{r}
+table(y[-tr],yhat) # Matrice de confusion
+```
+```{r}
+sum(yhat != y[-tr])/length(yhat) #taux d'erreur de classement
+```
+8. Calculons le taux d’erreur de classement en appliquant 100 fois la méthode de l’échantillon test (avec 70 victimes dans l’échantillon d’apprentissage).
+
+```{r}
+err <- vector(length = 100)
+
+for (k in 1:100) 
+{
+  tr <- sample(1:n,70)
+  train <- X[tr,]
+  test <- X[-tr,]
+  m <- lda(train, y[tr],prior=c(0.5,0.5))
+  yhat <- predict(m, test)$class
+  err[k] <- sum(yhat != y[-tr])/length(yhat)
+}
+
+err
+```
+
+```{r}
+mean(err) #moyenne des taux d'erreur 
+```
+
+Nous constatons que la moyenne des taux d'erreur "mean(err)" est inférieur au taux d'erreur calculé précédemment. Plus notre modèle est entraîné, plus il améliore notre classification.
+
+```{r}
+sd(err) #ecart-type des taux d'erreur 
+```
+Cette méthode permet d'obtenir une estimation robuste de la performance du modèle, car elle réduit l'influence des fluctuations aléatoires dues à la partition des données.
+
+9.Calculons le taux d’erreur de classement par la méthode de la validation croisée (leave one out).
+
+```{r}
+ldacv <- lda(PRONO~.,infarctus[,-c(1,2)],prior=c(0.5,0.5),CV=TRUE) 
+ldacv$class
+```
+```{r}
+yhatcv <- ldacv$class
+sum(yhatcv != y)/length(yhatcv) # taux estimé a 15.8 en validation croisée leave one out
+```
+L'estimation du taux d'erreur nous donne0.1584158 ce qui indique qu'il y a des erreurs dans la
+classification.
